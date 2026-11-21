@@ -1,5 +1,7 @@
 # 简阅 · JianYue
 
+[English](README.en.md)
+
 极简的本地文档阅读器：Android（WebView 壳）+ Windows（Electron），
 支持 **PDF / Word / Excel / PPT / Markdown**，含旧版 `.doc / .xls / .ppt` 的自行解析。
 
