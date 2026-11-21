@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#F5F6F8">
+<title>简阅</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 书库 ============ -->
+  <section id="shelf" class="screen active">
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6.5 3.5h7.2L18.5 8v11.2a1.3 1.3 0 0 1-1.3 1.3H6.5a1.3 1.3 0 0 1-1.3-1.3V4.8a1.3 1.3 0 0 1 1.3-1.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M13.4 3.8V8h4.4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M8.6 12.4h6.2M8.6 15.6h4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brand-txt">
+          <h1>简阅</h1>
+          <p id="brandSub">文档阅读器</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="btnSelect" class="text-btn" hidden>选择</button>
+        <button id="btnTheme" class="icon-btn" aria-label="切换深色/浅色">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2v2.2M12 18.6v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3.2 12h2.2M18.6 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4.1" stroke="currentColor" stroke-width="1.7"/></svg>
+        </button>
+        <button id="btnAdd" class="icon-btn" aria-label="添加文档">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        </button>
+        <button id="btnRefresh" class="icon-btn" aria-label="重新扫描">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 1 0-.9 4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M20 4.6V11h-6.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="editbar" id="editbar" hidden>
+      <button id="btnExitEdit" class="eb-btn">取消</button>
+      <span class="eb-title" id="ebTitle">已选 0 项</span>
+      <button id="btnSelAll" class="eb-btn">全选</button>
+    </div>
+
+    <div id="permBar" class="permbar" hidden>
+      <div class="perm-txt">
+        <strong>需要“所有文件访问”权限</strong>
+        <span>授权后会自动扫描并收录本机的 PDF / Word / Excel / PPT</span>
+      </div>
+      <button id="btnPerm" class="perm-btn">去授权</button>
+    </div>
+
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24" fill="none" class="s-ico"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="搜索文档名称" autocomplete="off" spellcheck="false">
+      <button id="qClear" class="q-clear" hidden aria-label="清空">×</button>
+    </div>
+
+    <div class="colbar" id="colbar" hidden>
+      <button id="btnColBack" class="col-back">‹ 全部书库</button>
+      <span class="col-title" id="colTitle"></span>
+      <button id="btnColMenu" class="col-more" aria-label="书库操作">⋯</button>
+    </div>
+
+    <div class="shelves" id="shelves" hidden></div>
+
+    <div class="chips" id="chips">
+      <button class="chip is-on" data-f="all">全部</button>
+      <button class="chip" data-f="pdf">PDF</button>
+      <button class="chip" data-f="doc">Word</button>
+      <button class="chip" data-f="xls">Excel</button>
+      <button class="chip" data-f="ppt">PPT</button>
+      <button class="chip" data-f="md">MD</button>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <div class="actionbar" id="actionbar" hidden>
+      <button class="act" id="btnMerge">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5h6.4L12 9h8v9.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 18.2V7.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 4.5h5.6L15 6h4v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        合并进书库
+      </button>
+      <button class="act danger" id="btnDelSel">删除</button>
+    </div>
+
+    <div class="state" id="state">
+      <div class="spinner"></div>
+      <p>正在扫描本机文档…</p>
+    </div>
+  </section>
+
+  <!-- ============ 阅读器 ============ -->
+  <section id="reader" class="screen">
+    <header class="rbar">
+      <button id="btnBack" class="icon-btn" aria-label="返回">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14.5 5 8 12l6.5 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="rtitle">
+        <div class="r-name" id="rName">—</div>
+        <div class="r-meta" id="rMeta"></div>
+      </div>
+      <button id="btnSplit" class="icon-btn" aria-label="分屏">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="4.8" width="17.6" height="14.4" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M12 4.8v14.4" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <button id="btnMore" class="icon-btn" aria-label="更多">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5.6" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="18.4" r="1.7" fill="currentColor"/></svg>
+      </button>
+    </header>
+
+    <div class="panes" id="panes">
+      <div class="pane" id="paneA"><div class="stage" id="stage"></div></div>
+      <div class="pane" id="paneB"><div class="stage" id="stageB"></div></div>
+    </div>
+
+    <aside class="pickerside" id="pickerSide" hidden>
+      <div class="ps-head">
+        <span class="ps-title">选一份文档分屏</span>
+        <button id="psOrient" class="ps-orient">左右</button>
+        <button id="psClose" class="ps-x" aria-label="关闭">×</button>
+      </div>
+      <div class="ps-list" id="psList"></div>
+    </aside>
+    <div class="picker-mask" id="pickerMask" hidden></div>
+
+    <div class="loading" id="loading" hidden>
+      <div class="spinner"></div>
+      <p id="loadingTxt">正在解析文档…</p>
+    </div>
+
+    <footer class="rfoot" id="rfoot">
+      <div class="zoomctl">
+        <button id="zOut" aria-label="缩小">−</button>
+        <button id="zVal" title="点击复位">100%</button>
+        <button id="zIn" aria-label="放大">+</button>
+      </div>
+      <button id="btnFit" class="fitbtn">适宽</button>
+      <div class="pager" id="pager" hidden>
+        <button id="pPrev" aria-label="上一页">‹</button>
+        <span id="pNow">1 / 1</span>
+        <button id="pNext" aria-label="下一页">›</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 菜单 -->
+  <div class="sheet-mask" id="sheetMask" hidden></div>
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetTitle" hidden></div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+
+  <!-- 二次确认 -->
+  <div class="dialog-mask" id="dlgMask" hidden></div>
+  <div class="dialog" id="dlg" hidden role="dialog" aria-modal="true">
+    <div class="dlg-title" id="dlgTitle">删除文件？</div>
+    <div class="dlg-text" id="dlgText"></div>
+    <input class="dlg-input" id="dlgInput" type="text" autocomplete="off" spellcheck="false" hidden>
+    <div class="dlg-actions">
+      <button class="dlg-btn" id="dlgCancel">取消</button>
+      <button class="dlg-btn danger" id="dlgOk">删除</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script>
+/* 调试用：后台标签页中 rAF 会被暂停，pdf.js 的分帧渲染会卡住 */
+if (location.search.indexOf('rafshim') >= 0) {
+  window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(Date.now()); }, 16); };
+  window.cancelAnimationFrame = function (id) { clearTimeout(id); };
+}
+</script>
+<script src="lib/pdf.min.js"></script>
+<script src="lib/fflate.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

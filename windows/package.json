@@ -1,0 +1,41 @@
+{
+  "name": "jianyue-win",
+  "productName": "简阅",
+  "version": "1.4.0",
+  "description": "简阅 · Windows 文档阅读器（PDF / Word / Excel / PPT，含旧版 .doc/.xls/.ppt）",
+  "main": "main.js",
+  "author": "JianYue",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable nsis"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.jianyue.reader",
+    "productName": "简阅",
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "assets/**/*",
+      "build/icon.png"
+    ],
+    "directories": { "output": "dist" },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "简阅"
+    }
+  }
+}

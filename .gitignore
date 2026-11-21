@@ -1,0 +1,13 @@
+# 构建产物与签名（绝不入库）
+build/
+dist/
+node_modules/
+*.apk
+*.apk.idsig
+*.jks
+*.keystore
+*.p12
+# 本地临时
+.DS_Store
+*.log
+sample.ppt
