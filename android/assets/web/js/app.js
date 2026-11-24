@@ -94,6 +94,8 @@ const groupOf = (e) => (e === 'pdf' ? 'pdf' : (e === 'doc' || e === 'docx') ? 'd
 /* WebView 每次启动端口随机，localStorage 按源隔离不可靠；
    偏好与手动添加改存到本地服务的书库里（Java 侧持久化） */
 const PREFS_COL = '内部·设置（勿改）';
+const POS_PREFIX = 'pos:';
+const S_POS = new Map();   // 文件路径 → 阅读进度（0..1）
 
 async function loadPrefs() {
   try {
@@ -101,6 +103,13 @@ async function loadPrefs() {
     const c = (d.collections || []).find((x) => x.name === PREFS_COL);
     const items = c && Array.isArray(c.items) ? c.items : [];
     S.manual = new Set(items.filter((i) => i.startsWith('md:')).map((i) => i.slice(3)));
+    for (const it of items) {
+      if (!it.startsWith(POS_PREFIX)) continue;
+      const body = it.slice(POS_PREFIX.length);
+      const eq = body.lastIndexOf('=');
+      if (eq <= 0) continue;
+      S_POS.set(decodeURIComponent(body.slice(0, eq)), Number(body.slice(eq + 1)) || 0);
+    }
     const th = items.find((i) => i.startsWith('theme:'));
     if (th === 'theme:dark' || th === 'theme:light') applyTheme(th.slice(6));
   } catch (e) {
@@ -113,6 +122,11 @@ async function savePrefs() {
     const items = [...S.manual].map((p) => 'md:' + p);
     const th = document.documentElement.dataset.theme;
     if (th) items.push('theme:' + th);
+    let n = 0;
+    for (const [path, r] of S_POS) {
+      if (n++ >= 300) break;
+      items.push(POS_PREFIX + encodeURIComponent(path) + '=' + r.toFixed(4));
+    }
     const d = await (await fetch('/api/collections?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' })).json();
     const c = (d.collections || []).find((x) => x.name === PREFS_COL);
     if (c) {
@@ -353,6 +367,42 @@ function assignEntry(k, f) {
   if (k === 'a') S.entry = f; else S.entryB = f;
 }
 
+
+/* ---------------- 阅读进度 ---------------- */
+let posTimer = 0;
+
+function recordPos(k) {
+  const pane = PANES[k];
+  if (!pane || !pane.entry || !pane.stage) return;
+  const st = pane.stage;
+  const denom = Math.max(1, st.scrollHeight - st.clientHeight);
+  const r = Math.min(1, Math.max(0, st.scrollTop / denom));
+  S_POS.set(pane.entry.p, r);
+}
+
+function schedulePosSave(k) {
+  clearTimeout(posTimer);
+  posTimer = setTimeout(() => {
+    recordPos(k);
+    savePrefs();
+  }, 1200);
+}
+
+function restorePos(k) {
+  const pane = PANES[k];
+  if (!pane || !pane.entry || !pane.stage) return;
+  const r = S_POS.get(pane.entry.p);
+  if (r == null || r <= 0.01) return;
+  const st = pane.stage;
+  const apply = () => {
+    const denom = Math.max(0, st.scrollHeight - st.clientHeight);
+    if (denom > 0) st.scrollTop = r * denom;
+  };
+  requestAnimationFrame(() => requestAnimationFrame(apply));
+  setTimeout(apply, 350);
+  if (r > 0.02) toast('已回到上次阅读位置', 1800);
+}
+
 function fitPane(k, mode) {
   const pane = PANES[k];
   const v = pane.view;
@@ -408,6 +458,7 @@ async function openEntry(f, paneKey) {
     el.loading.hidden = true;
   }
   if (k === ACT) { syncReaderChrome(); updatePager(); }
+  restorePos(k);
 }
 
 async function openPdf(f, k) {
@@ -1068,6 +1119,7 @@ function bind() {
     st.addEventListener('scroll', () => {
       if (!S.busy) setActivePane(k);
       onStageScroll();
+      schedulePosSave(k);
     }, { passive: true });
   });
 
@@ -1183,6 +1235,7 @@ function startSplit(f) {
 
 function exitSplit() {
   if (!SPLIT.on) return;
+  recordPos('b'); savePrefs();
   SPLIT.on = false;
   el.panes.classList.add('closing');
   el.panes.classList.remove('split');
@@ -1410,6 +1463,7 @@ async function deleteFile(f) {
 }
 
 function closeReader() {
+  recordPos('a'); recordPos('b'); savePrefs();
   ['a', 'b'].forEach((k) => {
     const p = PANES[k];
     if (p.view) { try { p.view.destroy(); } catch (e) {} }
