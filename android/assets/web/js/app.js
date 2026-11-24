@@ -24,6 +24,7 @@ const el = {
   zIn: $('zIn'), zOut: $('zOut'), zVal: $('zVal'), btnFit: $('btnFit'),
   pager: $('pager'), pPrev: $('pPrev'), pNext: $('pNext'), pNow: $('pNow'),
   sheet: $('sheet'), sheetMask: $('sheetMask'), toast: $('toast'),
+  jumpBar: $('jumpBar'), jumpText: $('jumpText'), jumpGo: $('jumpGo'), jumpClose: $('jumpClose'),
   sheetTitle: $('sheetTitle'), sheetBody: $('sheetBody'),
   dlg: $('dlg'), dlgMask: $('dlgMask'), dlgTitle: $('dlgTitle'),
   dlgText: $('dlgText'), dlgOk: $('dlgOk'), dlgCancel: $('dlgCancel'), dlgInput: $('dlgInput'),
@@ -388,19 +389,39 @@ function schedulePosSave(k) {
   }, 1200);
 }
 
+let jumpTarget = null;
+
+function applyJump(k, r) {
+  const pane = PANES[k];
+  if (!pane || !pane.stage) return;
+  const st = pane.stage;
+  const go = () => {
+    const denom = Math.max(0, st.scrollHeight - st.clientHeight);
+    if (denom > 0) st.scrollTop = r * denom;
+  };
+  requestAnimationFrame(go);
+  setTimeout(go, 260);
+}
+
+function hideJumpBar() {
+  jumpTarget = null;
+  el.jumpBar.classList.remove('show');
+  clearTimeout(hideJumpBar._t);
+  hideJumpBar._t = setTimeout(() => { el.jumpBar.hidden = true; }, 240);
+}
+
 function restorePos(k) {
   const pane = PANES[k];
   if (!pane || !pane.entry || !pane.stage) return;
   const r = S_POS.get(pane.entry.p);
-  if (r == null || r <= 0.01) return;
-  const st = pane.stage;
-  const apply = () => {
-    const denom = Math.max(0, st.scrollHeight - st.clientHeight);
-    if (denom > 0) st.scrollTop = r * denom;
-  };
-  requestAnimationFrame(() => requestAnimationFrame(apply));
-  setTimeout(apply, 350);
-  if (r > 0.02) toast('已回到上次阅读位置', 1800);
+  if (r == null || r <= 0.02) return;
+  jumpTarget = { k, r };
+  el.jumpText.textContent = '上次读到 ' + Math.round(r * 100) + '%';
+  el.jumpBar.hidden = false;
+  void el.jumpBar.offsetHeight;
+  el.jumpBar.classList.add('show');
+  clearTimeout(hideJumpBar._t);
+  hideJumpBar._t = setTimeout(hideJumpBar, 9000);
 }
 
 function fitPane(k, mode) {
@@ -1153,6 +1174,11 @@ function bind() {
     startSplit(f);
   });
   el.btnTheme.addEventListener('click', toggleTheme);
+  el.jumpGo.addEventListener('click', () => {
+    if (jumpTarget) applyJump(jumpTarget.k, jumpTarget.r);
+    hideJumpBar();
+  });
+  el.jumpClose.addEventListener('click', hideJumpBar);
 
   attachGestures(el.stage, 'a');
   attachGestures(el.stageB, 'b');
@@ -1463,7 +1489,7 @@ async function deleteFile(f) {
 }
 
 function closeReader() {
-  recordPos('a'); recordPos('b'); savePrefs();
+  recordPos('a'); recordPos('b'); savePrefs(); hideJumpBar();
   ['a', 'b'].forEach((k) => {
     const p = PANES[k];
     if (p.view) { try { p.view.destroy(); } catch (e) {} }
